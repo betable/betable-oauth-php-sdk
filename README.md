@@ -23,13 +23,17 @@ Usage
 
 **Redirect the player to Betable**:
 
-    $betable->authorize();
+    $betable->authorize($state);
+
+`$state` is optional but recommended.  Provide a string you plan to use below to ensure the player who begins the OAuth protocol is the same one that is redirected back in the next step.
 
 **When the player is redirected back to your redirect URI, complete the OAuth protocol to produce an access token**:
 
-    $access_token = $betable->token();
+    $access_token = $betable->token($state);
 
 If you call `token` at an inappropriate time, it will return `false`.  This can be useful in detecting where the player is in the OAuth protocol.
+
+Again, `$state` is optional but recommended.  Provide the samea string you provided to `authorize` above.  If `$state` is provided and doesn't match the `state` parameter in the redirect URL, an error will be logged and no access token will be returned.
 
 **Configure the [Betable Browser SDK](https://github.com/betable/betable-browser-sdk)**:
 
