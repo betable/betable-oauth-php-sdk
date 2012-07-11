@@ -37,64 +37,90 @@ class Betable {
     }
 
     function authorize() {
-        # TODO Do any of these need to be URL encoded by hand?
-        header("Location: ${this->authorize_endpoint}?client_id=${this->client_id}&redirect_uri=${this->redirect_uri}&response_type=code\r\n");
+        $location = sprintf(
+            "%s?client_id=%s&redirect_uri=%s&response_type=code",
+            $this->authorize_endpoint,
+            $this->client_id,
+            $this->redirect_uri
+        );
+        error_log("[Betable authorize] redirecting to $location");
+        header("Location: $location\r\n");
         exit;
     }
 
     function token() {
         if (!isset($_GET["code"])) {
-            # TODO error_log
+            error_log("[Betable token] code not found");
             return false;
         }
-        $response = curl_quickie("POST", "/token", array(
+        $response = $this->curl_quickie("POST", "/token", true, array(
             "code" => $_GET["code"],
             "grant_type" => "authorization_code",
-            "redirect_uri" => "${this->redirect_uri}",
+            "redirect_uri" => $this->redirect_uri,
         ));
-        if (!$response) {
-            # TODO error_log
+        if (false === $response) {
             return false;
         }
-        $response = parse_str($response); # TODO Error handling.
         $this->access_token = $response["access_token"];
+        error_log("[Betable token] access_token: " . $this->access_token);
         return $this->access_token;
     }
 
     function account() {
         if (!isset($this->access_token)) {
-            # TODO error_log
+            error_log("[Betable account] access_token not found");
             return;
         }
+        return $this->curl_quickie("GET", "/account", false, array(
+            "access_token" => $this->access_token,
+        ));
     }
 
     function wallet() {
         if (!isset($this->access_token)) {
-            # TODO error_log
+            error_log("[Betable wallet] access_token not found");
             return;
         }
+        return $this->curl_quickie("GET", "/account/wallet", false, array(
+            "access_token" => $this->access_token,
+        ));
     }
 
-    function curl_quickie($method, $path, $fields = array()) {
-        $url = "${this->endpoint}${path}";
+    function curl_quickie(
+        $method,
+        $path,
+        $http_basic_auth = true,
+        $fields = array()
+    ) {
+        $url = $this->endpoint . $path;
         if ("POST" !== $method) {
             $url .= "?" . http_build_query($fields);
         }
         $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        if ($http_basic_auth) {
+            curl_setopt(
+                $ch,
+                CURLOPT_USERPWD,
+                $this->client_id . ":" . $this->client_secret
+            );
+        }
         if ("POST" === $method) {
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($fields));
         }
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         $response = curl_exec($ch);
-        if (200 != curl_getinfo($ch, CURLINFO_HTTP_CODE)) {
-            # TODO error_log
+        $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        $array = json_decode($response, true);
+        if (!is_array($array)) {
+            error_log("[Betable] $method $path responded $response");
             return false;
         }
-        curl_close($ch);
-        return $response;
+        if (200 !== $status) {
+            error_log("[Betable] $method $path responded $status");
+        }
+        return $array;
     }
 
 }
