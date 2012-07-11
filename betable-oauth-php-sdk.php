@@ -36,21 +36,28 @@ class Betable {
         $this->redirect_uri = $redirect_uri;
     }
 
-    function authorize() {
+    function authorize($state = false) {
         $location = sprintf(
             "%s?client_id=%s&redirect_uri=%s&response_type=code",
             $this->authorize_endpoint,
-            $this->client_id,
-            $this->redirect_uri
+            urlencode($this->client_id),
+            urlencode($this->redirect_uri)
         );
+	if ($state) {
+	    $location .= "&state=" . urlencode($state);
+	}
         error_log("[Betable authorize] redirecting to $location");
         header("Location: $location\r\n");
         exit;
     }
 
-    function token() {
+    function token($state = false) {
         if (!isset($_GET["code"])) {
             error_log("[Betable token] code not found");
+            return false;
+        }
+        if ($state && isset($_GET["state"]) && $state !== urldecode($_GET["state"])) {
+            error_log("[Betable token] state mismatch; got {$_GET["state"]} but expected $state");
             return false;
         }
         $response = $this->curl_quickie("POST", "/token", true, array(
