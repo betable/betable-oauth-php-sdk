@@ -33,7 +33,7 @@ Usage
 
 If you call `token` at an inappropriate time, it will return `false`.  This can be useful in detecting where the player is in the OAuth protocol.
 
-Again, `$state` is optional but recommended.  Provide the samea string you provided to `authorize` above.  If `$state` is provided and doesn't match the `state` parameter in the redirect URL, an error will be logged and no access token will be returned.
+Again, `$state` is optional but recommended.  Provide the same string you provided to `authorize` above.  If `$state` is provided and doesn't match the `state` parameter in the redirect URL, an error will be logged and no access token will be returned.
 
 **Configure the [Betable Browser SDK](https://github.com/betable/betable-browser-sdk)**:
 
